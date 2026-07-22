@@ -56,7 +56,9 @@ html, body {
 #hud .back { color: var(--you); font-size: 22px; font-weight: 700; }
 #hud .gc-ava { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--you), #ffab48); display: grid; place-items: center; font-size: 17px; flex-shrink: 0; }
 #hud .gc-meta { flex: 1; min-width: 0; }
-#hud .gc-name { font-weight: 700; font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gc-name-row { display: flex; align-items: baseline; gap: 8px; }
+#hud .gc-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hud-when { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
 .sus-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
 .sus-track { flex: 1; height: 7px; background: #33374a; border-radius: 4px; overflow: hidden; }
 .sus-bar { height: 100%; width: 0%; background: var(--good); border-radius: 4px; transition: width .25s, background .25s; }
@@ -109,26 +111,32 @@ html, body {
 .msg-row.sys .sys-pill.join { color: var(--good); background: rgba(76,199,154,.16); }
 .msg-row.sys .sys-pill.leave { color: var(--alert); background: rgba(255,90,118,.16); }
 
-/* actionable (test) message */
+/* actionable message — a question aimed at YOU. glows until you reply (no timer). */
 .msg-row.actionable { max-width: 92%; }
-.actionable .bubble { border: 2px solid var(--you); box-shadow: 0 0 18px rgba(247,71,107,.4); background: #262029; }
-.timer-wrap { height: 4px; background: rgba(255,255,255,.12); border-radius: 3px; margin: 5px 8px 0; overflow: hidden; }
-.timer-bar { height: 100%; width: 100%; background: var(--you); border-radius: 3px; }
-.timer-bar.warn { background: var(--alert); }
+.actionable .bubble { border: 2px solid var(--you); background: #262029; animation: needreply 1.3s ease-in-out infinite; }
+@keyframes needreply { 0%,100% { box-shadow: 0 0 10px rgba(247,71,107,.35); } 50% { box-shadow: 0 0 22px rgba(247,71,107,.7); } }
 
-.choices { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 4px 0; }
-.choice {
-  font-family: inherit; font-size: 14px; font-weight: 700;
-  padding: 9px 13px; border-radius: 12px;
-  background: #3a3f4d; border: 1.5px solid #4d5468; color: #fff;
-  cursor: pointer; box-shadow: 0 2px 0 rgba(0,0,0,.35);
+/* ============================================================
+   Reply bar — your always-available voice at the bottom
+   ============================================================ */
+
+#reply-bar {
+  flex-shrink: 0; background: var(--panel); border-top: 1px solid var(--line);
+  padding: 8px 8px max(8px, env(safe-area-inset-bottom)); z-index: 6;
 }
-.choice:active { transform: translateY(2px); box-shadow: none; }
-.choice.emoji { font-size: 22px; padding: 7px 14px; }
+.reply-row { display: flex; align-items: center; gap: 7px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.reply-row::-webkit-scrollbar { display: none; }
+#reply-ctx { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+.reply-label { font-size: 10px; font-weight: 700; letter-spacing: .4px; color: var(--you); text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
 
-.outcome { font-size: 11px; margin: 3px 8px 0; font-style: italic; color: var(--muted); }
-.outcome.good { color: var(--good); }
-.outcome.bad { color: var(--alert); }
+.reply-chip {
+  font-family: inherit; font-size: 15px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  padding: 9px 15px; border-radius: 14px; cursor: pointer; box-shadow: 0 2px 0 rgba(0,0,0,.35);
+}
+.reply-chip:active { transform: translateY(2px); box-shadow: none; }
+.reply-chip.filler { background: #2f333f; border: 1.5px solid #454b60; color: var(--ink); }
+.reply-chip.answer { background: var(--you); border: 1.5px solid #ff7d9b; color: #fff; box-shadow: 0 2px 0 #ab2f49; }
+.reply-chip.emoji { font-size: 21px; padding: 6px 15px; }
 
 /* ============================================================
    FX / banners

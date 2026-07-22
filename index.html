@@ -29,7 +29,10 @@
       <span class="back">‹</span>
       <span class="gc-ava">👥</span>
       <span class="gc-meta">
-        <span class="gc-name" id="gc-name">the group chat</span>
+        <span class="gc-name-row">
+          <span class="gc-name" id="gc-name">the group chat</span>
+          <span class="hud-when" id="hud-timer"></span>
+        </span>
         <div class="sus-row">
           <div class="sus-track"><div id="sus-bar" class="sus-bar"></div></div>
           <span id="sus-pct" class="sus-pct">0% sus</span>
@@ -44,6 +47,12 @@
 
     <!-- ===== The chat feed ===== -->
     <section id="chat" class="hidden"></section>
+
+    <!-- ===== Reply bar: your always-available voice ===== -->
+    <div id="reply-bar" class="hidden">
+      <div id="reply-ctx" class="reply-row hidden"></div>
+      <div id="reply-fillers" class="reply-row"></div>
+    </div>
 
     <!-- ===== FX / banners ===== -->
     <div id="fx-layer" aria-hidden="true"></div>
@@ -70,7 +79,7 @@
       <div class="start-row">
         <button id="gallery-btn" class="small-btn">🎭 <span id="coll-line">You: 0/9</span></button>
       </div>
-      <p class="tiny-note">SUS is your health · LIKES get you the invite · deflect when you don't know</p>
+      <p class="tiny-note">Reply from the bar · they'll get suspicious if you ignore them · deflect when you're unsure</p>
       <p id="best-line" class="tiny-note">🏆 Best invite: 0 yes votes</p>
     </div>
 
