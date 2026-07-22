@@ -1,20 +1,22 @@
-# Left on Read 💬
+# Wrong Chat 💬
 
-You're in the barkada group chat and it never stops. Messages fly in —
-reply to the crush, defuse the fight, report the GCash scam, warn mom
-about the stranger… or **leave it on read** (sometimes the correct
-move: don't feed the trolls, don't forward the chain). **Members are
-your health.** Handle the chaos and the GC grows; fumble and people
-leave, one "left the group 👋" at a time. Hit zero and the GC is dead.
+Someone added you to the wrong group chat — they think you're someone
+else with your name. **Figure out who they think you are** from the
+clues they drop, act in character, and don't get exposed. Survive to
+the party address, then talk your way in as a plus-one so you can go
+as yourself.
 
-Tap ✌️ **Leave** to bank your biggest GC like a pro, or ride it to
-zero (one revive: "add your other friends").
+**Two meters:** SUS is your health (act out of character → it rises →
+EXPOSED). LIKES is your score (blend in well → the group vouches for
+you at the plus-one vote). When you don't know who you are yet:
+**deflect** — safe, but it won't win hearts.
 
-The wrapped card is a **screenshot of your GC** — your persona
-(The Ghoster · Certified Marites · GC Admin Energy · Tita's Favorite 💀),
-your biggest-GC number, your stats — which you drop straight back into
-a real group chat. 12 personas to collect. English + Taglish.
+Each run is a different hidden identity (the vegetarian dog-mom, the
+chaotic always-late one, the single chill transfer). Your `YOU` panel
+assembles as you catch clues. Nine personas to collect, from The
+Chameleon to Caught Red-Handed. The verdict card is a screenshot of
+your run — drop it back in a real group chat.
 
-The first idea in the set with **nothing missing on screen**: a text
-game whose whole fantasy is reading text. Plain HTML/CSS/JS, Web Audio,
-PWA, PostHog. Open the whole folder to play.
+Prototype of the group-chat core (DMs + the "real Kai shows up" threat
+are the next layer). Plain HTML/CSS/JS, Web Audio, PWA, PostHog.
+Open the whole folder to play.
