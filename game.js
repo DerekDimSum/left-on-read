@@ -86,6 +86,16 @@ const DEFLECTS = ["haha 😅", "you know me 😌", "ur funny 😂", "brb", "😭
 
 const STAMPS = { "PLUS ONE": "#2e7d32", "MADE IT": "#1565c0", "SUS": "#e65100", "EXPOSED": "#c62828" };
 const PERSONAS = [
+  // --- Act 3B endings: the real one showed up ---
+  { id: "usurper", by: "the_group", emoji: "👑", stamp: "PLUS ONE",
+    match: (s) => s.ending === "usurper" },
+  { id: "adopted", by: "the_group", emoji: "🥹", stamp: "MADE IT",
+    match: (s) => s.ending === "adopted" },
+  { id: "slipped", by: "nobody", emoji: "🫥", stamp: "MADE IT",
+    match: (s) => s.ending === "slipped" },
+  { id: "busted_real", by: "the_real_one", emoji: "💀", stamp: "EXPOSED",
+    match: (s) => s.ending === "busted" },
+  // --- Act 3A endings: you kept the room ---
   { id: "exposed_name", by: "the_group", emoji: "🫣", stamp: "EXPOSED",
     match: (s) => s.exposed && s.exposedBy === "name" },
   { id: "exposed",      by: "the_group", emoji: "🚨", stamp: "EXPOSED",
@@ -107,6 +117,10 @@ const PERSONAS = [
 ];
 function personaText(id) { return PERSONAS_TEXT[id]; }
 const PERSONAS_TEXT = {
+  usurper:      { t: "The Better Kai",    l: "The real one showed up. They took YOUR side. Unreal." },
+  adopted:      { t: "Adopted Anyway",    l: "You came clean and they invited you regardless. 🥹" },
+  slipped:      { t: "The Ghost",         l: "Left before they could prove anything. No trace." },
+  busted_real:  { t: "Caught by the Real One", l: "They brought the actual person in. Brutal." },
   exposed_name: { t: "Caught Red-Handed", l: "They asked your name. You blanked. It's over." },
   exposed:      { t: "Fully Exposed",     l: "One wrong move too many. 'who ARE you??'" },
   perfect:      { t: "The Perfect Impostor", l: "Zero slips. Everyone loved you. Flawless run." },
@@ -118,6 +132,8 @@ const PERSONAS_TEXT = {
   wallflower:   { t: "The Wallflower",   l: "Kept your head down. Made it out clean." },
 };
 const PERSONA_HINT = {
+  usurper: "Out-Kai the real Kai", adopted: "Confess to a group that loves you",
+  slipped: "Leave before they prove it", busted_real: "Get caught by the real one",
   exposed_name: "Fail a name test", exposed: "Rack up too much sus", perfect: "Flawless run, everyone yes",
   beloved: "Get everyone to say yes", chameleon: "Learn all 5 traits + charm", deflector: "Deflect 6+ times",
   barely: "Scrape in with ≤2 yes", smooth: "Win over half the group", wallflower: "Just survive quietly",
@@ -127,24 +143,45 @@ const PERSONA_HINT = {
 
 const TUNING = {
   susMax: 100,
-  susWrong: 22, susDeflect: 4, susRight: -8,
   spawnGapStart: 2300, spawnGapMin: 1300,
   clueChance: 0.42,
   // social escalation when you ignore something aimed at you (no timer!).
   // measured in messages-since-asked, NOT seconds. the first nudge is FREE —
   // you get a real beat to notice it's about you before it ever costs you.
   escalate: [
-    { age: 3, sus: 0 },      // "@you?" — just a nudge, no penalty
-    { age: 6, sus: 10 },     // "i can see you're online 😐"
-    { age: 9, sus: 20 },     // "…is this even the real ___?"
+    { age: 3, trust: 0 },    // "@you?" — just a nudge, no penalty
+    { age: 6, trust: -10 },  // "i can see you're online 😐"
+    { age: 9, trust: -18 },  // "…is this even the real ___?"
   ],
-  susIgnorePerMsg: 18,       // past the last rung, each ignored message stings
+  ignorePerMsg: -16,         // past the last rung, each ignored message stings
+  susPerTrust: 2.2,          // trust lost -> sus gained
   maxRows: 12,
-  finaleAtSec: 68,
   members: 8,
+
+  /* ---- per-person trust: the social map. every member feels about you
+     independently, so no two runs sour the same way. ---- */
+  trustStart: { ally: 68, sweet: 58, chill: 52, hype: 52, chaos: 50, nosy: 45, impatient: 45, sharp: 34 },
+  trustRight: 13, trustRightOthers: 4,     // nailing X's question wins X over
+  trustWrong: -19, trustWrongOthers: -6,   // blowing it costs X the most
+  trustDeflect: -2,
+  trustReact: 6,                           // reacting to someone's message warms them
+  trustIgnore: -9,                         // per escalation rung, aimed at the asker
+  trustProbe: -5,                          // asking what you "should" know costs you
+
+  probes: 3,                               // player-initiated info gathering per run
+  interrogateBelow: 26,                    // a member this cold starts grilling you
+  act3AtSec: 68,                           // when the third act fires
+  act3NeedsAvg: 44,                        // below this average trust, the REAL one shows up instead
 };
 // filler replies you can send ANY time to stay present in the chat
 const FILLERS = ["😂", "same", "🫶", "brb", "real", "true", "lmaooo", "😭"];
+// player-initiated probes: fish for a clue instead of waiting to be fed one
+const PROBES = [
+  { say: "wait who all is coming again?", back: "you were literally there when we planned it 😭" },
+  { say: "remind me what i said i'd bring?", back: "same as always lol" },
+  { say: "sorry catching up — what'd i miss?", back: "scroll up 😂 but ok" },
+  { say: "hold on, refresh my memory 😅", back: "you're so forgetful lately" },
+];
 
 /* ===================== STATE ===================== */
 
@@ -157,6 +194,11 @@ const state = {
   sus: 0, likes: 0, streak: 0, bestStreak: 0, elapsed: 0,
   pending: null,             // a message directed at YOU that wants a reply (no timer — social escalation instead)
   cast: [], impatient: "Bea", sharp: "Ate Rhea", ally: "Migs", nosy: "Lance",
+  trust: {},                 // name -> 0..100, the social map
+  probesLeft: 0, reacted: {}, // player-initiated verbs
+  grilledBy: {},             // who has already interrogated you
+  act3: null,                // 'vote' | 'real' — which third act you earned
+  realHere: false,           // the actual person you're impersonating has arrived
   finaleStarted: false, membersN: TUNING.members,
   seq: 0, lastFrame: 0, lastSecondTick: 0, nextSpawn: 0,
   loopId: 0, challenger: null,
@@ -164,6 +206,7 @@ const state = {
 };
 function freshStats() {
   return { rights: 0, wrongs: 0, deflects: 0, misses: 0, learned: 0,
+           reacts: 0, probes: 0, grills: 0, ending: null, confront: null,
            exposed: false, exposedBy: null, likes: 0, yes: 0, members: TUNING.members, survived: 0 };
 }
 
@@ -252,6 +295,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   frame: $("game-frame"), hud: $("hud"), chat: $("chat"), youPanel: $("you-panel"),
   gcName: $("gc-name"), susBar: $("sus-bar"), susPct: $("sus-pct"), likes: $("likes-val"), timer: $("hud-timer"),
+  castStrip: $("cast-strip"), whoTip: $("who-tip"), picker: $("react-picker"),
   replyBar: $("reply-bar"), replyCtx: $("reply-ctx"), replyFillers: $("reply-fillers"),
   milestone: $("milestone"), pauseOverlay: $("pause-overlay"), fx: $("fx-layer"), banner: $("chaos-banner"),
   startScreen: $("start-screen"), resultScreen: $("result-screen"),
@@ -292,6 +336,73 @@ function assignCast() {
 // pick a random member of THIS run's group
 function who() { return pick(state.cast.length ? state.cast : MEMBERS); }
 
+/* ===================== TRUST — the social map =====================
+   One global SUS bar made every run feel identical. Now each member
+   has their own read on you: the ally starts warm, the sharp one starts
+   cold, and who sours (and therefore who grills you, and who votes yes)
+   is different every time. */
+
+function initTrust() {
+  state.trust = {};
+  for (const m of state.cast) state.trust[m] = TUNING.trustStart[CAST[m].role] ?? 50;
+  state.trustStartAvg = avgTrust();   // sus measures how far you fall from here
+}
+function addTrust(name, n) {
+  if (!(name in state.trust)) return;
+  state.trust[name] = Math.max(0, Math.min(100, state.trust[name] + n));
+}
+// everyone except `except` moves a little too — the room has a mood
+function addTrustAll(n, except) {
+  for (const m of state.cast) if (m !== except) addTrust(m, n);
+}
+function avgTrust() {
+  const v = state.cast.map((m) => state.trust[m] ?? 50);
+  return v.reduce((a, b) => a + b, 0) / (v.length || 1);
+}
+function coldest() {
+  return state.cast.slice().sort((a, b) => (state.trust[a] ?? 50) - (state.trust[b] ?? 50))[0];
+}
+function trustTone(v) { return v >= 62 ? "warm" : v >= 38 ? "mid" : "cold"; }
+
+/* SUS is no longer its own invented number — it IS the room turning on you:
+   how far the group's average opinion has fallen since you walked in. One
+   source of truth (trust), one bar. */
+function syncSus(worse) {
+  const drop = state.trustStartAvg - avgTrust();
+  state.sus = Math.max(0, Math.min(TUNING.susMax, Math.round(drop * TUNING.susPerTrust)));
+  updateMeters(); renderCastStrip();
+  if (worse) sfx.sus();
+  if (state.running && state.sus >= TUNING.susMax) exposeYou("sus");
+}
+
+/* The strip of faces under the YOU panel: at a glance, who likes you and
+   who's onto you. Tap one to be reminded what they're like. */
+function renderCastStrip() {
+  const s = el.castStrip; if (!s) return;
+  if (s.childElementCount !== state.cast.length) {
+    s.innerHTML = "";
+    for (const m of state.cast) {
+      const b = document.createElement("button");
+      b.className = "face"; b.dataset.name = m;
+      b.innerHTML = `<span class="face-emoji">${CAST[m].emoji}</span>`;
+      b.addEventListener("pointerdown", (e) => { e.stopPropagation(); showWhoTip(m); });
+      s.appendChild(b);
+    }
+  }
+  for (const b of s.children) {
+    const t = state.trust[b.dataset.name] ?? 50;
+    b.className = "face " + trustTone(t);
+  }
+}
+let tipTimer = 0;
+function showWhoTip(m) {
+  const t = state.trust[m] ?? 50, tone = trustTone(t);
+  const feel = tone === "warm" ? "likes you" : tone === "mid" ? "not sure about you" : "onto you";
+  el.whoTip.innerHTML = `<b>${CAST[m].emoji} ${m}</b> · ${CAST[m].tag} <span class="tip-${tone}">— ${feel}</span>`;
+  el.whoTip.classList.remove("hidden");
+  clearTimeout(tipTimer); tipTimer = setTimeout(() => el.whoTip.classList.add("hidden"), 2200);
+}
+
 function startGame() {
   initAudio();
   if (!document.fullscreenElement && el.frame.requestFullscreen) el.frame.requestFullscreen().catch(() => {});
@@ -300,6 +411,9 @@ function startGame() {
   state.running = true; state.paused = false;
   state.sus = 0; state.likes = 0; state.streak = 0; state.bestStreak = 0; state.elapsed = 0;
   state.pending = null; state.finaleStarted = false; state.seq = 0;
+  state.act3 = null; state.realHere = false;
+  state.probesLeft = TUNING.probes; state.reacted = {}; state.grilledBy = {};
+  initTrust();
   state.stats = freshStats(); state.stats.members = state.membersN;
 
   const now = performance.now();
@@ -310,11 +424,13 @@ function startGame() {
   el.startScreen.classList.add("hidden"); el.resultScreen.classList.add("hidden");
   $("gallery-screen").classList.add("hidden"); el.pauseOverlay.classList.add("hidden");
   el.hud.classList.remove("hidden"); el.chat.classList.remove("hidden"); el.youPanel.classList.remove("hidden");
+  el.castStrip.classList.remove("hidden"); el.whoTip.classList.add("hidden");
+  el.castStrip.innerHTML = ""; closePicker();
   buildReplyBar();
   el.replyBar.classList.remove("hidden");
-  renderYouPanel();
+  renderYouPanel(); renderCastStrip();
   updateMeters();
-  if (el.timer) el.timer.textContent = `party in ${TUNING.finaleAtSec}s`;
+  if (el.timer) el.timer.textContent = `party in ${TUNING.act3AtSec}s`;
   // opening beat
   sysMsg(`${who()} added ${state.assumedName} to ${state.group}`, "join");
   setTimeout(() => { if (state.running) chatMsg(who(), `finally added you @${state.assumedName}!! 🎉`); }, 600);
@@ -329,12 +445,15 @@ function gameLoop(now) {
   updateClock(now);
   if (!state.running) return;
 
-  // finale trigger — but never mid-question (let a pending reply resolve first)
-  if (!state.finaleStarted && state.elapsed >= TUNING.finaleAtSec && !state.pending) { startFinale(); return; }
+  // third act — but never mid-question (let a pending reply resolve first)
+  if (!state.act3 && !state.pending) {
+    // the REAL one can turn up EARLY if the room has already soured on you
+    if (state.elapsed >= TUNING.act3AtSec || (state.elapsed > 26 && avgTrust() < 30)) { startAct3(); return; }
+  }
 
   // the chat keeps flowing whether or not you've replied. spawnMessage()
   // decides: escalate an ignored question, drop a clue, ask something, or chatter.
-  if (!state.finaleStarted && now >= state.nextSpawn) {
+  if (!state.act3 && now >= state.nextSpawn) {
     spawnMessage();
     const gap = Math.max(TUNING.spawnGapMin, TUNING.spawnGapStart - state.elapsed * 12);
     state.nextSpawn = now + gap * rand(0.85, 1.2);
@@ -343,19 +462,13 @@ function gameLoop(now) {
 function updateClock(now) {
   if (now - state.lastSecondTick >= 1000) { state.lastSecondTick += 1000; state.elapsed++;
     if (!el.timer) return;
-    const left = Math.max(0, TUNING.finaleAtSec - state.elapsed);
+    const left = Math.max(0, TUNING.act3AtSec - state.elapsed);
     el.timer.textContent = state.finaleStarted ? "🎉 party time" : `party in ${left}s`;
   }
 }
 
 /* ===================== METERS ===================== */
 
-function addSus(n) {
-  state.sus = Math.max(0, Math.min(TUNING.susMax, state.sus + n));
-  updateMeters();
-  if (n > 0) { sfx.sus(); }
-  if (state.sus >= TUNING.susMax) exposeYou("sus");
-}
 function addLikes(n) { state.likes = Math.max(0, state.likes + n); updateMeters(); }
 function updateMeters() {
   const pct = Math.round(state.sus);
@@ -369,7 +482,7 @@ function updateMeters() {
 
 function trim() { while (el.chat.children.length > TUNING.maxRows) el.chat.firstChild.remove(); }
 function sysMsg(text, kind) { const r = document.createElement("div"); r.className = "msg-row sys"; r.innerHTML = `<span class="sys-pill ${kind || ""}">${text}</span>`; el.chat.appendChild(r); trim(); }
-function chatMsg(who, text) { const r = document.createElement("div"); r.className = "msg-row them"; r.innerHTML = `<span class="who">${who}</span><span class="bubble">${text}</span>`; el.chat.appendChild(r); trim(); sfx.pop(); return r; }
+function chatMsg(who, text) { const r = document.createElement("div"); r.className = "msg-row them"; r.innerHTML = `<span class="who">${who}</span><span class="bubble">${text}</span>`; el.chat.appendChild(r); trim(); sfx.pop(); makeReactable(r, who); return r; }
 function youMsg(text) { const r = document.createElement("div"); r.className = "msg-row you"; r.innerHTML = `<span class="bubble">${text}</span>`; el.chat.appendChild(r); trim(); return r; }
 
 /* How the group tells you you're doing — emoji reactions on YOUR message,
@@ -412,9 +525,19 @@ function renderYouPanel() {
 
 /* ===================== MESSAGE SPAWN ===================== */
 
+/* The beat picker. NOT a fixed script — what happens next depends on the
+   state of the room: who's cold, what you still don't know, how you're doing. */
 function spawnMessage() {
   // a question aimed at YOU is still hanging → the group reacts to your silence
   if (state.pending) return advancePending();
+  if (state.act3) return;                      // the third act runs its own script
+
+  // someone has soured on you enough to start digging — fires because of how
+  // you've played, not because the clock said so
+  const cold = coldest();
+  if (cold && (state.trust[cold] ?? 50) <= TUNING.interrogateBelow &&
+      !state.grilledBy[cold] && state.elapsed > 12) return startInterrogation(cold);
+
   // breathing room: some pure ambient chatter between the real beats
   if (Object.keys(state.learned).length >= 2 && Math.random() < 0.26) { chatMsg(who(), pick(AMBIENT)); return; }
   // early game leans on clues so the profile fills before the pointed questions
@@ -425,39 +548,48 @@ function spawnMessage() {
   chatMsg(who(), pick(AMBIENT));   // filler
 }
 
-function spawnClue() {
-  const key = state.cluesLeft.shift();
-  const val = state.profile[key];
-  const t = TRAITS[key][val];
-  chatMsg(who(), t.clue.replace("{name}", state.assumedName));
-  // you "learn" the trait a beat later
+function spawnClue() { revealTrait(state.cluesLeft.shift()); }
+
+// someone says something that gives away who you're supposed to be
+function revealTrait(key, from) {
+  if (!key || state.learned[key]) return;
+  const t = TRAITS[key][state.profile[key]];
+  chatMsg(from || who(), t.clue.replace("{name}", state.assumedName));
   setTimeout(() => {
-    if (!state.running) return;
-    if (!state.learned[key]) {
-      state.learned[key] = true; state.stats.learned++;
-      renderYouPanel();
-      floatText(`💡 ${t.chip}`, "#4cc79a");
-      sfx.learn();
-    }
+    if (!state.running || state.learned[key]) return;
+    state.learned[key] = true; state.stats.learned++;
+    renderYouPanel();
+    floatText(`💡 ${t.chip}`, "#4cc79a");
+    sfx.learn();
   }, 700);
+}
+
+/* A member who's gone cold stops chatting and starts testing you. Higher
+   stakes both ways — this is where a bad run spirals or you claw it back. */
+function startInterrogation(m) {
+  state.grilledBy[m] = true;
+  state.stats.grills++;
+  chatMsg(m, pick([`ok ${state.assumedName} quick question`, `hold on. ${state.assumedName}.`,
+                   `@${state.assumedName} settle something for us`, `humor me ${state.assumedName} 🙂`]));
+  setTimeout(() => { if (state.running && !state.pending && !state.act3) spawnPrompt(m, true); }, 950);
 }
 
 /* A pointed question aimed at "you". NO countdown — it sits in the feed,
    highlighted, and its replies show up in the bar. Ignore it and the group
    escalates (advancePending). Some are tagged @you, some aren't — part of the
    game is NOTICING it's about you. */
-function spawnPrompt() {
-  const key = state.testsLeft.shift();
+function spawnPrompt(forceAsker, grill) {
+  const key = state.testsLeft.length ? state.testsLeft.shift() : pick(TRAIT_KEYS);
   const val = state.profile[key];
   const t = TRAITS[key][val];
   const seq = ++state.seq;
   const isReact = !!t.react;
-  const asker = Math.random() < 0.55 ? (state.nosy || who()) : who();
-  const tagged = isReact || Math.random() < 0.5;
+  const asker = forceAsker || (Math.random() < 0.55 ? (state.nosy || who()) : who());
+  const tagged = isReact || grill || Math.random() < 0.5;
   const q = (tagged ? `@${state.assumedName} ` : "") + t.q.replace("{name}", state.assumedName);
 
   const row = document.createElement("div");
-  row.className = "msg-row them actionable";
+  row.className = "msg-row them actionable" + (grill ? " grill" : "");
   row.innerHTML = `<span class="who">${asker}</span><span class="bubble">${q}</span>`;
   el.chat.appendChild(row); trim(); sfx.pop(); buzz(15);
 
@@ -466,7 +598,8 @@ function spawnPrompt() {
     { label: t.wrong, kind: "wrong" },
     { label: isReact ? "👍" : pick(DEFLECTS), kind: "deflect" },
   ]);
-  state.pending = { el: row, key, seq, choices, asker, isReact, age: 0, escLevel: 0, resolved: false };
+  state.pending = { el: row, key, seq, choices, asker, isReact, grill: !!grill,
+                    weight: grill ? 1.6 : 1, age: 0, escLevel: 0, resolved: false };
   showReplyContext();
 }
 
@@ -484,21 +617,27 @@ function resolvePrompt(choiceIdx) {
   /* All feedback is diegetic: reactions land on your own message and the
      person who asked replies. No screen shake, no big vibration — you read
      how it went the same way you would in a real group chat. */
+  const w = a.weight || 1;   // interrogations swing trust harder, both ways
   if (c.kind === "right") {
     state.stats.rights++;
     state.streak++; state.bestStreak = Math.max(state.bestStreak, state.streak);
-    addSus(TUNING.susRight); addLikes(1); sfx.right(); buzz(12);
+    addTrust(a.asker, TUNING.trustRight * w); addTrustAll(TUNING.trustRightOthers, a.asker);
+    addLikes(1); sfx.right(); buzz(12);
     addReactions(mine, pick([["❤️"], ["😂"], ["🔥"], ["❤️", "😂"], ["💯"]]));
     typingThen(a.asker, pick(["😂 same", "iconic", "lmaooo", "classic you", "knew it 😌", "never change ❤️"]), 700);
+    syncSus(false);
   } else if (c.kind === "deflect") {
     state.stats.deflects++;
-    addSus(TUNING.susDeflect);
+    addTrust(a.asker, TUNING.trustDeflect); addTrustAll(-1, a.asker);
     addReactions(mine, [pick(["👍", "🙂", "😐"])]);
+    syncSus(false);
   } else {
     state.stats.wrongs++; state.streak = 0;
-    addSus(TUNING.susWrong); addLikes(-1); sfx.wrong(); buzz(30);
+    addTrust(a.asker, TUNING.trustWrong * w); addTrustAll(TUNING.trustWrongOthers, a.asker);
+    addLikes(-1); sfx.wrong(); buzz(30);
     addReactions(mine, pick([["🤨"], ["😳"], ["🤨", "😳"], ["❓"]]));
     typingThen(a.asker, pick([`wait that's not like you @${state.assumedName} 🤨`, `since when?? 😅`, `u ok? that's weird`, `who are you and what did you do w ${state.assumedName} 😂`]), 750);
+    syncSus(true);
   }
   updateMeters();
 }
@@ -510,8 +649,9 @@ function advancePending() {
   a.age++;
   const steps = TUNING.escalate;
   const step = steps.find((e) => e.age === a.age);
-  if (step) { a.escLevel++; calloutFor(a.escLevel); addSus(step.sus); return; }
-  if (a.age > steps[steps.length - 1].age) { a.escLevel++; calloutFor(a.escLevel); addSus(TUNING.susIgnorePerMsg); return; }
+  const sting = (t) => { addTrust(a.asker, t); addTrustAll(t * 0.25, a.asker); syncSus(t < 0); };
+  if (step) { a.escLevel++; calloutFor(a.escLevel); sting(step.trust); return; }
+  if (a.age > steps[steps.length - 1].age) { a.escLevel++; calloutFor(a.escLevel); sting(TUNING.ignorePerMsg); return; }
   chatMsg(who(), pick(AMBIENT));   // in-between beats keep the room alive
 }
 
@@ -537,27 +677,106 @@ function calloutFor(level) {
 
 function buildReplyBar() {
   const f = el.replyFillers; f.innerHTML = "";
-  for (const label of shuffle(FILLERS).slice(0, 6)) {
+  // the probe chip: go FISHING for what you don't know instead of waiting
+  const p = document.createElement("button");
+  p.className = "reply-chip probe"; p.id = "probe-chip";
+  p.addEventListener("pointerdown", useProbe);
+  f.appendChild(p);
+  for (const label of shuffle(FILLERS).slice(0, 5)) {
     const b = document.createElement("button");
     b.className = "reply-chip filler"; b.textContent = label;
     b.addEventListener("pointerdown", () => sendFiller(label));
     f.appendChild(b);
   }
+  renderProbeChip();
   hideReplyContext();
 }
+function renderProbeChip() {
+  const p = $("probe-chip"); if (!p) return;
+  p.textContent = `🎣 ask ${state.probesLeft}`;
+  p.disabled = state.probesLeft <= 0;
+  p.classList.toggle("spent", state.probesLeft <= 0);
+}
+
+/* PROBE — you're not just waiting to be fed clues any more. Fish for one.
+   The catch: asking what "you" should already know makes the sharp one look
+   twice, so information has a price. */
+function useProbe() {
+  if (!state.running || state.finaleStarted || state.act3 || state.probesLeft <= 0) return;
+  state.probesLeft--; state.stats.probes++;
+  renderProbeChip();
+  const pr = pick(PROBES);
+  youMsg(pr.say);
+  const responder = who();
+  const unlearned = TRAIT_KEYS.filter((k) => !state.learned[k]);
+  addTrust(state.sharp, TUNING.trustProbe); syncSus(true);
+  setTimeout(() => {
+    if (!state.running) return;
+    chatMsg(responder, pr.back);
+    if (unlearned.length) setTimeout(() => revealTrait(pick(unlearned), responder), 700);
+  }, 800);
+}
+
 function showReplyContext() {
   const a = state.pending; if (!a) return;
+  renderChoices(a.isReact ? "react 👆" : (a.grill ? "careful 👆" : "reply 👆"),
+                a.choices.map((ch) => ({ label: ch.label, emoji: a.isReact })),
+                (_it, i) => resolvePrompt(i));
+}
+// generic chooser used by both normal prompts and the third act
+function renderChoices(label, items, onPick) {
   const c = el.replyCtx; c.innerHTML = "";
-  const lbl = document.createElement("span"); lbl.className = "reply-label"; lbl.textContent = a.isReact ? "react 👆" : "reply 👆"; c.appendChild(lbl);
-  a.choices.forEach((ch, i) => {
+  const lbl = document.createElement("span"); lbl.className = "reply-label"; lbl.textContent = label; c.appendChild(lbl);
+  items.forEach((it, i) => {
     const b = document.createElement("button");
-    b.className = "reply-chip answer" + (a.isReact ? " emoji" : "");
-    b.textContent = ch.label;
-    b.addEventListener("pointerdown", () => resolvePrompt(i));
+    b.className = "reply-chip answer" + (it.emoji ? " emoji" : "");
+    b.textContent = it.label;
+    b.addEventListener("pointerdown", () => onPick(it, i));
     c.appendChild(b);
   });
   c.classList.remove("hidden");
   el.replyBar.classList.add("has-ctx");
+}
+
+/* REACT TO ANYTHING — tap any message in the feed to react to it. Warms
+   that specific person. This is the always-available social verb: you can
+   work the room instead of only answering when spoken to. */
+let pickerFor = null;
+const REACT_EMOJIS = ["❤️", "😂", "🔥", "😭"];
+function makeReactable(row, name) {
+  if (!state.trust[name]) { /* still fine — non-members just won't move trust */ }
+  row.classList.add("reactable");
+  row.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("button")) return;
+    e.stopPropagation();
+    openPicker(row, name);
+  });
+}
+function openPicker(row, name) {
+  if (!state.running || row.dataset.reacted) return;
+  pickerFor = { row, name };
+  const p = el.picker;
+  p.classList.remove("hidden");
+  const r = row.getBoundingClientRect(), f = el.frame.getBoundingClientRect();
+  p.style.left = Math.max(6, Math.min(f.width - p.offsetWidth - 6, r.left - f.left + 8)) + "px";
+  p.style.top = Math.max(6, r.top - f.top - 46) + "px";
+}
+function closePicker() { if (el.picker) el.picker.classList.add("hidden"); pickerFor = null; }
+function applyReaction(emo) {
+  if (!pickerFor || !state.running) return closePicker();
+  const { row, name } = pickerFor;
+  row.dataset.reacted = "1";
+  const span = document.createElement("span");
+  span.className = "reactions mine"; span.textContent = emo;
+  row.appendChild(span);
+  state.stats.reacts++;
+  // diminishing returns so you can't just spam-heart your way in
+  const n = state.reacted[name] || 0;
+  state.reacted[name] = n + 1;
+  addTrust(name, Math.max(2, TUNING.trustReact - n * 2));
+  syncSus(false); sfx.pop(); buzz(10);
+  closePicker();
+  if (Math.random() < 0.22) typingThen(name, pick(["😂", "❤️", "hahaha", "🫶", "😭 stop"]), 650);
 }
 function hideReplyContext() {
   el.replyCtx.innerHTML = ""; el.replyCtx.classList.add("hidden");
@@ -593,6 +812,82 @@ function exposeYou(by) {
 
 /* ===================== FINALE: address drop → plus-one vote ===================== */
 
+/* THE FORK. You don't always get the party invite scene — you have to have
+   earned the room. Lose it and the third act is the real one showing up. */
+function startAct3() {
+  const avg = avgTrust();
+  state.act3 = avg >= TUNING.act3NeedsAvg ? "vote" : "real";
+  track("act3", { branch: state.act3, avgTrust: Math.round(avg), sec: state.elapsed });
+  if (state.act3 === "vote") startFinale(); else startRealPerson();
+}
+
+/* ---- Act 3B: the person you've been pretending to be turns up ---- */
+function startRealPerson() {
+  state.finaleStarted = true; state.realHere = true;
+  el.replyBar.classList.add("hidden");
+  hideReplyContext(); closePicker();
+  if (el.timer) el.timer.textContent = "😳 uh oh";
+  const n = state.assumedName;
+  chatMsg(state.sharp, pick([`hold on. i just texted ${n}.`, `something's not right. calling ${n} now.`, `guys i'm adding the real ${n}.`]));
+  setTimeout(() => { if (state.running) sysMsg(`${state.sharp} added ${n} (the real one)`, "leave"); }, 1300);
+  setTimeout(() => { if (state.running) { sfx.exposed(); chatMsg(n, pick([`uh… who is in my chat 😐`, `guys why is there another me??`, `i just woke up. who IS that`, `that's not me. i don't even have this number`])); } }, 2400);
+  setTimeout(() => { if (state.running) runConfrontation(); }, 3600);
+}
+
+function runConfrontation() {
+  if (!state.running) return;
+  el.replyBar.classList.remove("hidden");
+  renderChoices("last words 👆", [
+    { label: "😤 no YOU'RE fake" },
+    { label: "🙃 ok you got me 😭" },
+    { label: "🫥 leave quietly" },
+  ], (_it, i) => resolveConfrontation(["double", "confess", "bail"][i]));
+}
+
+function resolveConfrontation(kind) {
+  hideReplyContext(); el.replyBar.classList.add("hidden");
+  state.stats.confront = kind;
+  const n = state.assumedName;
+  const believers = state.cast.filter((m) => (state.trust[m] ?? 50) >= 55).length;
+  const allyT = state.trust[state.ally] ?? 50;
+
+  if (kind === "bail") {
+    youMsg("👋");
+    setTimeout(() => { if (!state.running) return; sysMsg(`${state.realName} left the chat`, "leave"); sfx.no(); }, 700);
+    setTimeout(() => { if (!state.running) return; chatMsg(who(), pick(["…who was that", "wait come back 😭", "did we just get catfished 💀"])); }, 1500);
+    state.stats.ending = "slipped"; state.stats.yes = 0;
+    setTimeout(() => endRun(), 2600);
+    return;
+  }
+
+  if (kind === "double") {
+    youMsg(`excuse me?? I'M ${n}. block this impostor 😤`);
+    const won = believers >= Math.ceil(state.membersN / 2);
+    setTimeout(() => { if (!state.running) return;
+      if (won) { chatMsg(state.ally, pick([`honestly… you DO sound like ${n} 😭`, `wait i believe them`])); sfx.yes(); showBanner("👑 THEY BELIEVED YOU"); }
+      else { chatMsg(state.sharp, pick([`nice try 💀`, `we've known ${n} for 10 years bestie`])); sfx.exposed(); showBanner("💀 BUSTED"); }
+    }, 900);
+    state.stats.ending = won ? "usurper" : "busted";
+    state.stats.exposed = !won; state.stats.exposedBy = won ? null : "real";
+    state.stats.yes = believers;
+    setTimeout(() => endRun(), 2400);
+    return;
+  }
+
+  // confess — throw yourself on the mercy of the room you spent 60s building
+  youMsg(`ok ok 😭 i'm ${state.realName}. wrong number. but i've been here the whole time…`);
+  const forgiven = allyT >= 58 || believers >= Math.ceil(state.membersN / 2);
+  setTimeout(() => { if (!state.running) return;
+    if (forgiven) { chatMsg(state.ally, pick([`LMAO honestly? come anyway 😭`, `no bc i'm attached now. come.`])); sfx.party(); showBanner("🥹 COME ANYWAY"); }
+    else { chatMsg(state.sharp, pick([`yeah no. bye 👋`, `that's so weird actually`])); sfx.no(); showBanner("😬 removed"); }
+  }, 900);
+  state.stats.ending = forgiven ? "adopted" : "busted";
+  state.stats.exposed = !forgiven; state.stats.exposedBy = forgiven ? null : "real";
+  state.stats.yes = forgiven ? believers : 0;
+  setTimeout(() => endRun(), 2400);
+}
+
+/* ---- Act 3A: you kept the room, so you get the invite scene ---- */
 function startFinale() {
   state.finaleStarted = true;
   el.replyBar.classList.add("hidden");
@@ -614,13 +909,9 @@ function runVote() {
   const step = () => {
     if (i >= voters.length) return finishVote(yes);
     const m = voters[i++];
-    const role = CAST[m] ? CAST[m].role : "";
-    let p = 0.18 + state.likes * 0.075 - (state.sus / 100) * 0.35;
-    if (role === "ally") p += 0.3;        // Migs has your back
-    else if (role === "sharp") p -= 0.22; // Rhea's a hard sell
-    else if (role === "sweet") p += 0.12;
-    else if (role === "chaos") p += 0.05;
-    p = Math.max(0.04, Math.min(0.96, p));
+    // no generic formula any more — each person votes their own opinion of you
+    const t = state.trust[m] ?? 50;
+    const p = Math.max(0.04, Math.min(0.96, (t - 22) / 62 + state.likes * 0.02));
     const ok = Math.random() < p;
     if (ok) { yes++; chatMsg(m, pick(["yesss bring them! 🎉", "the more the merrier 🥰", "ofc!! 👍", "sure sure 😎", "any friend of yours ❤️"])); sfx.yes(); }
     else { chatMsg(m, pick(["hmm idk them tho 🤨", "kinda tight on space 😅", "who is that again?", "maybe not this time 👎"])); sfx.no(); }
@@ -642,7 +933,7 @@ function finishVote(yes) {
 
 function endRun() {
   state.running = false; stopLoop();
-  el.replyBar.classList.add("hidden");
+  el.replyBar.classList.add("hidden"); closePicker(); el.whoTip.classList.add("hidden");
   state.stats.survived = state.elapsed;
   showResult();
 }
@@ -709,11 +1000,16 @@ function renderCard(p, withStamp = true) {
   ctx.fillStyle = "#22242e"; ctx.fillRect(60, 400, 780, 230); ctx.strokeStyle = "#2b2f3d"; ctx.lineWidth = 3; ctx.strokeRect(60, 400, 780, 230);
   ctx.textAlign = "center";
   if (s.exposed) { ctx.font = "120px serif"; ctx.fillText("🚨", 300, 545); ctx.fillStyle = "#ff5a76"; ctx.font = `bold 60px ${F}`; ctx.fillText("EXPOSED", 610, 515); ctx.fillStyle = "#8b90a0"; ctx.font = `24px ${F}`; ctx.fillText(`at ${fmt(s.survived)}`, 610, 560); }
-  else { ctx.font = "110px serif"; ctx.fillText(p.emoji, 260, 545); ctx.fillStyle = "#4cc79a"; ctx.font = `bold 92px ${F}`; ctx.fillText(`${s.yes}/${s.members}`, 600, 525); ctx.fillStyle = "#8b90a0"; ctx.font = `24px ${F}`; ctx.fillText("SAID YES", 600, 568); }
+  else if (s.ending === "slipped") { ctx.font = "110px serif"; ctx.fillText("🫥", 300, 545); ctx.fillStyle = "#8f7bff"; ctx.font = `bold 54px ${F}`; ctx.fillText("VANISHED", 610, 520); ctx.fillStyle = "#8b90a0"; ctx.font = `24px ${F}`; ctx.fillText(`at ${fmt(s.survived)}`, 610, 562); }
+  else {
+    const bigLabel = s.ending === "usurper" ? "TOOK YOUR SIDE" : s.ending === "adopted" ? "STILL WANTED YOU" : "SAID YES";
+    ctx.font = "110px serif"; ctx.fillText(p.emoji, 260, 545); ctx.fillStyle = "#4cc79a"; ctx.font = `bold 92px ${F}`; ctx.fillText(`${s.yes}/${s.members}`, 600, 525);
+    ctx.fillStyle = "#8b90a0"; ctx.font = `${bigLabel.length > 12 ? 20 : 24}px ${F}`; ctx.fillText(bigLabel, 600, 568);
+  }
 
   ctx.textAlign = "left"; ctx.fillStyle = "#eceaf0"; ctx.font = `26px ${F}`;
   ctx.fillText(`✅ ${s.rights} in-character   🤨 ${s.wrongs} slips   🌫️ ${s.deflects} dodges`, 60, 690);
-  ctx.fillText(`🕵️ figured out ${s.learned}/5 of "${state.assumedName}"`, 60, 730);
+  ctx.fillText(`🕵️ ${s.learned}/5 figured out · 🎣 ${s.probes} asks · ❤️ ${s.reacts} reacts`, 60, 730);
 
   const bub = (y, h) => { ctx.fillStyle = "#22242e"; if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(60, y, 780, h, 18); ctx.fill(); } else ctx.fillRect(60, y, 780, h); };
   bub(770, 120);
@@ -753,7 +1049,7 @@ async function shareCard() {
   const b = $("share-card-btn"); b.textContent = "✅ Saved + copied!"; setTimeout(() => (b.textContent = "📤 Share the verdict"), 2000);
 }
 function copyChallenge() { if (!lastPersona) return; const text = shareText(lastPersona) + " " + challengeUrl(lastPersona); if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); track("copy_challenge", {}); const b = $("copy-share-btn"); b.textContent = "✅ Copied!"; setTimeout(() => (b.textContent = "🔗 Copy Challenge Link"), 1500); }
-function showMenu() { el.resultScreen.classList.add("hidden"); $("gallery-screen").classList.add("hidden"); el.hud.classList.add("hidden"); el.chat.classList.add("hidden"); el.youPanel.classList.add("hidden"); el.replyBar.classList.add("hidden"); renderBestLine(); renderCollLine(); el.startScreen.classList.remove("hidden"); track("menu_open"); }
+function showMenu() { el.resultScreen.classList.add("hidden"); $("gallery-screen").classList.add("hidden"); el.hud.classList.add("hidden"); el.chat.classList.add("hidden"); el.youPanel.classList.add("hidden"); el.replyBar.classList.add("hidden"); el.castStrip.classList.add("hidden"); el.whoTip.classList.add("hidden"); closePicker(); renderBestLine(); renderCollLine(); el.startScreen.classList.remove("hidden"); track("menu_open"); }
 
 /* ===================== FX ===================== */
 
@@ -791,6 +1087,17 @@ $("share-card-btn").textContent = "📤 Share the verdict";
 $("mute-btn").textContent = muted ? "🔇" : "🔊";
 try { $("handle-input").value = localStorage.getItem("wcName") || ""; } catch { /* ok */ }
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+// reaction picker: tap a message -> pick an emoji
+if (el.picker) {
+  for (const emo of REACT_EMOJIS) {
+    const b = document.createElement("button");
+    b.className = "pick-emo"; b.textContent = emo;
+    b.addEventListener("pointerdown", (e) => { e.stopPropagation(); applyReaction(emo); });
+    el.picker.appendChild(b);
+  }
+}
+el.chat.addEventListener("pointerdown", () => closePicker());
 
 $("start-btn").addEventListener("click", startGame);
 $("play-again-btn").addEventListener("click", startGame);

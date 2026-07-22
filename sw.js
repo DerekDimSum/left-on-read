@@ -3,7 +3,7 @@
    cache-first for art assets (they change rarely and dominate the
    payload). Bump CACHE on breaking asset changes. */
 
-const CACHE = "wc-v3";
+const CACHE = "wc-v4";
 
 self.addEventListener("install", () => self.skipWaiting());
 

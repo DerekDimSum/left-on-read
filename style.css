@@ -90,6 +90,36 @@ html, body {
 @keyframes chip-in { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* ============================================================
+   Social map — one face per member, tinted by how they feel
+   ============================================================ */
+
+#cast-strip {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  padding: 6px 10px; background: #15171d; border-bottom: 1px solid var(--line);
+  overflow-x: auto; scrollbar-width: none;
+}
+#cast-strip::-webkit-scrollbar { display: none; }
+.face {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 15px; cursor: pointer;
+  background: #2b2f3d; border: 2px solid var(--line); padding: 0;
+  transition: border-color .3s, box-shadow .3s, opacity .3s;
+}
+.face.warm { border-color: var(--good); box-shadow: 0 0 8px rgba(76,199,154,.45); }
+.face.mid  { border-color: #6b7186; }
+.face.cold { border-color: var(--alert); box-shadow: 0 0 8px rgba(255,90,118,.5); opacity: .95; }
+.face-emoji { line-height: 1; }
+
+#who-tip {
+  position: absolute; left: 8px; right: 8px; top: 118px; z-index: 34;
+  background: #0f1116; border: 1px solid var(--line); border-radius: 10px;
+  padding: 7px 11px; font-size: 12px; color: var(--muted);
+  box-shadow: 0 6px 18px rgba(0,0,0,.6); animation: chip-in .2s ease-out;
+}
+#who-tip b { color: var(--ink); }
+.tip-warm { color: var(--good); } .tip-mid { color: var(--muted); } .tip-cold { color: var(--alert); }
+
+/* ============================================================
    Chat feed
    ============================================================ */
 
@@ -129,6 +159,20 @@ html, body {
 .msg-row.actionable { max-width: 92%; }
 .actionable .bubble { border: 2px solid var(--you); background: #262029; animation: needreply 1.3s ease-in-out infinite; }
 @keyframes needreply { 0%,100% { box-shadow: 0 0 10px rgba(247,71,107,.35); } 50% { box-shadow: 0 0 22px rgba(247,71,107,.7); } }
+/* an interrogation — someone has gone cold and is testing you on purpose */
+.actionable.grill .bubble { border-color: var(--alert); background: #2b1f24; animation: needreply 0.9s ease-in-out infinite; }
+
+.reactable { cursor: pointer; }
+.reactions.mine { background: #3a2b33; border-color: var(--you); }
+
+/* tap-a-message reaction picker */
+#react-picker {
+  position: absolute; z-index: 38; display: flex; gap: 2px;
+  background: #0f1116; border: 1px solid var(--line); border-radius: 999px;
+  padding: 4px 6px; box-shadow: 0 6px 18px rgba(0,0,0,.65); animation: chip-in .16s ease-out;
+}
+.pick-emo { font-family: inherit; font-size: 21px; background: transparent; border: none; cursor: pointer; padding: 2px 5px; line-height: 1; }
+.pick-emo:active { transform: scale(1.35); }
 
 /* ============================================================
    Reply bar — your always-available voice at the bottom
@@ -140,7 +184,9 @@ html, body {
 }
 .reply-row { display: flex; align-items: center; gap: 7px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .reply-row::-webkit-scrollbar { display: none; }
-#reply-ctx { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+/* answers WRAP — never scroll an option out of sight in a deduction game */
+#reply-ctx { flex-wrap: wrap; overflow-x: visible; row-gap: 6px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+#reply-ctx .reply-chip { max-width: 100%; white-space: normal; }
 .reply-label { font-size: 10px; font-weight: 700; letter-spacing: .4px; color: var(--you); text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
 
 .reply-chip {
@@ -149,6 +195,8 @@ html, body {
 }
 .reply-chip:active { transform: translateY(2px); box-shadow: none; }
 .reply-chip.filler { background: #2f333f; border: 1.5px solid #454b60; color: var(--ink); }
+.reply-chip.probe { background: #23303a; border: 1.5px solid #3c6b86; color: #8fd0f0; font-size: 13px; }
+.reply-chip.probe.spent { opacity: .35; border-color: #333; color: var(--muted); }
 .reply-chip.answer { background: var(--you); border: 1.5px solid #ff7d9b; color: #fff; box-shadow: 0 2px 0 #ab2f49; }
 .reply-chip.emoji { font-size: 21px; padding: 6px 15px; }
 
