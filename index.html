@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Left on Read</title>
+
+  <meta property="og:title" content="Left on Read 💬" />
+  <meta property="og:description" content="You're in the barkada GC and it's chaos. Reply, defuse, report — or leave it on read. Don't let the group die." />
+  <meta property="og:image" content="https://derekdimsum.github.io/left-on-read/assets/og-card.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Left on Read 💬" />
+  <meta name="twitter:image" content="https://derekdimsum.github.io/left-on-read/assets/og-card.png" />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#f7476b" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="icon" href="assets/icon-192.png" />
+  <style>.hidden { display: none !important; }</style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="game-frame">
+
+    <!-- ===== GC header (name + member count = health) ===== -->
+    <header id="hud" class="hidden">
+      <span class="back">‹</span>
+      <span class="gc-ava">👨‍👩‍👧‍👦</span>
+      <span class="gc-meta">
+        <span class="gc-name" id="gc-name">THE BARKADA GC</span>
+        <span class="gc-sub"><span id="members-val">12</span> members · <span id="hud-timer">0:00</span></span>
+      </span>
+      <button id="mute-btn" class="hud-btn">🔊</button>
+      <button id="leave-btn" class="hud-btn leave">Leave</button>
+    </header>
+
+    <!-- ===== The chat feed = the whole playfield ===== -->
+    <section id="chat" class="hidden"></section>
+
+    <!-- ===== Fake typing bar (sells the messaging-app feel) ===== -->
+    <div id="typebar" class="hidden">
+      <span id="typebar-text">iMessage…</span>
+      <span id="streak-tag" class="hidden">🔥 x0</span>
+    </div>
+
+    <!-- ===== FX / banners / milestones ===== -->
+    <div id="fx-layer" aria-hidden="true"></div>
+    <div id="chaos-banner" class="hidden"></div>
+    <div id="milestone" class="hidden"></div>
+    <div id="pause-overlay" class="hidden">⏸️ brb… (paused)</div>
+
+    <!-- ===== Start screen ===== -->
+    <div id="start-screen" class="screen">
+      <div class="logo-block">
+        <div class="logo-badge">💬</div>
+        <h1 class="logo">Left on Read</h1>
+        <div class="logo-sub">survive the group chat</div>
+      </div>
+      <p class="how-to" id="how-to-text">
+        You're in the barkada GC and it never stops. Messages fly in — reply, defuse,
+        report the scam… or leave it on read. Some things you should NOT touch.
+        Keep the group alive.
+      </p>
+      <label id="handle-row">@<input id="handle-input" maxlength="16" placeholder="your_name" autocomplete="off" spellcheck="false" /></label>
+      <div id="versus-banner" class="versus-banner hidden">🥊 <span id="versus-text"></span></div>
+      <button id="start-btn" class="big-btn">💬 Open the GC</button>
+      <div class="start-row">
+        <button id="gallery-btn" class="small-btn">🎭 <span id="coll-line">You: 0/12</span></button>
+        <button id="lang-btn" class="small-btn">🇵🇭 Taglish</button>
+      </div>
+      <p class="tiny-note">members are your health · leave banks your run · don't feed the trolls</p>
+      <p id="best-line" class="tiny-note">🏆 Biggest GC: 0 · ⏱ 0:00</p>
+    </div>
+
+    <!-- ===== Persona gallery ===== -->
+    <div id="gallery-screen" class="screen hidden">
+      <div class="panel">
+        <div class="report-header">🎭 WHO YOU'VE BEEN</div>
+        <p id="gallery-progress" class="result-line">0/12</p>
+        <div id="gallery-grid" class="gallery-grid"></div>
+        <button id="gallery-close-btn" class="small-btn">✖ Close</button>
+      </div>
+    </div>
+
+    <!-- ===== GC dying: one more chance ===== -->
+    <div id="ad-screen" class="screen hidden">
+      <div class="panel">
+        <div class="panel-emoji">📉</div>
+        <h2>The GC is dying!</h2>
+        <p>Everyone's leaving… but you could add some people:</p>
+        <button id="ad-btn" class="big-btn ad-btn">➕ Add your other friends<br /><small>+8 members — once per run</small></button>
+        <button id="ad-skip-btn" class="small-btn">Let it die, see the recap</button>
+      </div>
+    </div>
+
+    <!-- ===== Result: the GC-screenshot recap ===== -->
+    <div id="result-screen" class="screen hidden">
+      <div class="panel">
+        <div class="report-header">💬 GROUP CHAT · WRAPPED</div>
+        <div id="new-best" class="new-best hidden">🎉 Biggest GC yet!</div>
+        <div id="new-persona" class="new-best new-persona hidden">✨ NEW YOU:</div>
+        <img id="card-preview" class="card-preview" alt="Your group chat wrapped" />
+        <p id="versus-result" class="versus-result hidden"></p>
+        <p id="result-coll-line" class="result-line">🎭 Personas: 0/12</p>
+        <p id="result-best-line" class="result-line">🏆 Biggest GC: 0</p>
+        <button id="share-card-btn" class="big-btn share-btn">📤 Share with the GC</button>
+        <button id="play-again-btn" class="big-btn replay-btn">💬 New GC</button>
+        <button id="copy-share-btn" class="small-btn">🔗 Copy Challenge Link</button>
+        <button id="menu-btn" class="small-btn">🏠 Main Menu</button>
+      </div>
+    </div>
+
+    <canvas id="card-canvas" width="900" height="1125" class="hidden"></canvas>
+  </div>
+
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js" onerror="this.remove()"></script>
+  <script src="game.js"></script>
+  <script>
+    window.addEventListener("load", () => {
+      if (typeof startGame === "function") return;
+      document.body.innerHTML =
+        '<div style="font-family:sans-serif;max-width:420px;margin:15vh auto;padding:24px;' +
+        'border:3px solid #333;border-radius:16px;background:#f6f6f6;color:#222;text-align:center">' +
+        "<h2>💬 Left on Read</h2><p>Open the whole <strong>left-on-read</strong> folder to play " +
+        "(needs style.css and game.js).</p></div>";
+    });
+  </script>
+</body>
+</html>
