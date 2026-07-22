@@ -27,160 +27,81 @@ const CAST_KEYS = Object.keys(CAST);
 
 const VOICES = {
   en: {
-    label: "🇵🇭 Taglish",
     ambient: [
-      "hoy", "HAHAHA", "sino gising", "real", "😭😭", "pak", "grabe",
-      "ok lang ba kayo dyan", "brb", "who's this 😊", "gm ☀️", "asa na tayo",
-      "sana all", "😮‍💨", "chz", "edi wow", "napagod ako", "🫡", "amp",
+      "hoy", "HAHAHA", "who's awake", "real", "😭😭", "lmaooo", "grabe",
+      "u guys ok over there", "brb", "who's this 😊", "gm ☀️", "where we at",
+      "sana all", "😮‍💨", "k", "no bc why", "i'm so tired", "🫡", "amp", "luh",
+      "anyone else seeing this", "stop 💀", "omg", "same", "wait what",
     ],
-    // Actionable message types. chips: first-listed is not always correct;
-    // `c` marks the correct chip id. onExpire: 'ok' = leaving it was right.
+    // Each message maps to ONE correct tool from your action bar.
     types: {
-      scam:     { cast: "scammer", text: "pa-GCASH lang 500, emergency 🥺 09xx",
-                  chips: [["🚫 Report","report",1],["💬 Reply","reply",0],["🙈 Ignore","ignore",0]], expire: 5200, onExpire: "lose" },
-      crush:    { cast: "crush", text: "uy… busy ka ba? 👉👈",
-                  chips: [["❤️ Reply","reply",1],["🙈 Leave on read","ignore",0]], expire: 4500, onExpire: "lose" },
-      troll:    { cast: "drama", text: "edi wow ang yabang mo 🙄",
-                  chips: [["🔥 Clap back","clap",0],["🙈 Ignore","ignore",1]], expire: 5000, onExpire: "ok" },
-      chain:    { cast: "tita", text: "Forward to 10 people or bad luck 🙏🕯️",
-                  chips: [["📤 Forward","forward",0],["🗑️ Delete","delete",1]], expire: 5500, onExpire: "ok" },
-      stranger: { cast: "mom", text: "sino po ito? 😊 (kausap si +63 unknown)",
-                  chips: [["🛡️ Warn mom","warn",1],["👋 Welcome","welcome",0]], expire: 4800, onExpire: "lose" },
-      fight:    { cast: "drama", text: "@bestie ikaw talaga sinabi mo yun 😤",
-                  chips: [["🕊️ Defuse","defuse",1],["🍿 Watch","watch",0],["🔥 Join","join",0]], expire: 4600, onExpire: "lose" },
-      bday:     { cast: "ate", text: "GUYS bday ni Marites today!! 🎂",
-                  chips: [["🎉 Greet","greet",1],["🙈 Ignore","ignore",0]], expire: 5200, onExpire: "lose" },
-      chismis:  { cast: "marites", text: "psst chika lang… si ___ daw… 👀",
-                  chips: [["👀 Engage","engage",0],["🙊 Stay out","stay",1]], expire: 5200, onExpire: "ok" },
-      sib:      { cast: "sib", text: "pahingi pang-load 🥺 bilis",
-                  chips: [["💸 Send","send",0],["🙈 Ignore","ignore",1]], expire: 5400, onExpire: "ok" },
-      nice:     { cast: "friend", text: "salamat sa kahapon ha 🫶 love you",
-                  chips: [["❤️ React","react",1],["🙈 Ignore","ignore",0]], expire: 5000, onExpire: "ok" },
-    },
-    outcomes: {
-      report: "reported the scammer ✓", reply_c: "replied in time ✓", ignore_c: "left on read ✓",
-      delete: "chain message deleted ✓", warn: "saved mom from the scam ✓", defuse: "you defused it ✓",
-      greet: "greeted them 🎉", stay: "stayed out of it ✓", react: "showed some love ❤️",
-      wrong: "…that was the wrong move 💀", scammed: "you got scammed 💸",
-      fed: "you fed the troll 🔥", spread: "you spread the chismis 🫢",
-      leftread: "you left on read 👀",
+      scam:     { cast: "scammer", text: "pa-GCash lang 500, emergency 🥺 09xx", tool: "report", expire: 5200, onExpire: "lose",
+                  ok: "reported the scammer ✓", bad: "you got scammed 💸" },
+      crush:    { cast: "crush", text: "uy… you busy? 👉👈", tool: "reply", expire: 4400, onExpire: "lose",
+                  ok: "replied in time ❤️", bad: "left the crush on read 💔" },
+      fight:    { cast: "drama", text: "@bestie you really said that 😤", tool: "defuse", expire: 4600, onExpire: "lose",
+                  ok: "you defused it 🕊️", bad: "it blew up 🔥" },
+      chain:    { cast: "tita", text: "Forward to 10 ppl or bad luck 🙏🕯️", tool: "delete", expire: 5600, onExpire: "ok",
+                  ok: "deleted the chain ✓", bad: "you forwarded it 💀" },
+      troll:    { cast: "drama", text: "edi wow so full of yourself 🙄", tool: "ignore", expire: 5200, onExpire: "ok",
+                  ok: "ignored the troll ✓", bad: "you fed the troll 🔥" },
+      chismis:  { cast: "marites", text: "psst tea… so apparently ___ 👀", tool: "ignore", expire: 5400, onExpire: "ok",
+                  ok: "stayed out of it ✓", bad: "you spread the tea 🫢" },
+      sib:      { cast: "sib", text: "pahingi load 🥺 pls pls now", tool: "ignore", expire: 5600, onExpire: "ok",
+                  ok: "ignored (you're broke) ✓", bad: "you sent the load 💸" },
+      nice:     { cast: "friend", text: "thanks for yesterday ha 🫶 love u", tool: "react", expire: 5200, onExpire: "ok",
+                  ok: "showed some love ❤️", bad: "…that was cold 🥶" },
+      bday:     { cast: "ate", text: "GUYS it's Marites' bday today!! 🎂", tool: "react", expire: 5400, onExpire: "lose",
+                  ok: "you greeted them 🎉", bad: "you missed the bday 😬" },
+      stranger: { cast: "mom", text: "who's this? 😊 (new number joined)", tool: "report", expire: 5000, onExpire: "lose",
+                  ok: "kicked the stranger 🛡️", bad: "the scammer got in 💀" },
     },
     banners: {
-      raid: "🔗 SCAM LINK SPREADING!", war: "🔥 FULL-BLOWN WORD WAR!", night: "🌙 2AM CONFESSION DROPPED",
-      leak: "📸 SCREENSHOT LEAKED!!", dead: "💀 THE GC DIED.", banked: "✌️ YOU LEFT ON A HIGH NOTE",
+      dead: "💀 THE GC DIED.", banked: "✌️ YOU LEFT ON A HIGH NOTE",
     },
     sys: {
       join: (n) => `${n} joined the group`, leave: (n) => `${n} left the group 👋`,
-      added: "Marites added you to the group 🎉", welcome: "welcome!! 🎉",
+      added: "Marites added you to the group 🎉",
     },
     milestones: { 25: "the GC is THRIVING 🔥", 50: "your GC went viral 📈", 100: "MEGA GC 👑", 250: "legendary GC 🏆" },
     personas: {
-      ghoster:   { t: "The Ghoster",         l: "Left almost everything on read. Somehow survived.",   h: "Ignore a lot (correctly)" },
-      online:    { t: "Chronically Online",  l: "Replied in 0.2s. Every time. Touch grass.",           h: "Act on everything, fast" },
-      admin:     { t: "GC Admin Energy",     l: "Killed the scams, kept the peace. The backbone.",     h: "Report 3 scams in one run" },
-      peace:     { t: "The Peacemaker",      l: "Defused every fight. Nobody left angry.",             h: "Defuse 3 fights" },
-      marites:   { t: "Certified Marites",   l: "Spread the most chismis. Feared. Respected.",         h: "Engage chismis (you rascal)" },
-      titasfav:  { t: "Tita's Favorite",     l: "Forwarded the chains, fed the trolls 💀",             h: "Take the bait a few times" },
-      lurker:    { t: "The Lurker",          l: "Barely typed. Still made it to 2AM.",                 h: "Do almost nothing, survive" },
-      scammed:   { t: "The Scammed One",     l: "Sent the load. Clicked the link. Oh no.",             h: "Fall for the scams 😬" },
-      crushwin:  { t: "Rizz Certified",      l: "Never left the crush on read. Legend.",               h: "Always reply to the crush" },
-      dramaq:    { t: "The Drama Queen",     l: "Joined every fight. Chaos incarnate.",                h: "Join the fights 🔥" },
-      kicked:    { t: "Ex-Group Member",     l: "Killed the GC. A legend, briefly.",                   h: "Let the group die small" },
-      steady:    { t: "The Reliable One",    l: "No drama. Solid member. Rare W.",                     h: "Just… have a normal GC day" },
+      ghoster:  { t: "The Ghoster",        l: "Left almost everything on read. Somehow survived.",   h: "Ignore a lot (correctly)" },
+      online:   { t: "Chronically Online", l: "Replied in 0.2s. Every time. Touch grass.",           h: "Act on everything, fast" },
+      admin:    { t: "GC Admin Energy",    l: "Killed the scams, kept the peace. The backbone.",     h: "Report 3 scams in one run" },
+      peace:    { t: "The Peacemaker",     l: "Defused every fight. Nobody left angry.",             h: "Defuse 3 fights" },
+      marites:  { t: "Certified Marites",  l: "Spread the most tea. Feared. Respected.",             h: "Engage the tea 👀" },
+      titasfav: { t: "Tita's Favorite",    l: "Forwarded the chains, fed the trolls 💀",             h: "Take the bait a few times" },
+      lurker:   { t: "The Lurker",         l: "Barely typed. Still made it to 2AM.",                 h: "Do almost nothing, survive" },
+      scammed:  { t: "The Scammed One",    l: "Sent the load. Clicked the link. Oh no.",             h: "Fall for the scams 😬" },
+      crushwin: { t: "Rizz Certified",     l: "Never left the crush on read. Legend.",               h: "Always reply to the crush" },
+      menace:   { t: "The Menace",         l: "Left chaos in your wake. Iconic, honestly.",          h: "Make a LOT of wrong calls" },
+      kicked:   { t: "Ex-Group Member",    l: "Killed the GC. A legend, briefly.",                   h: "Let the group die" },
+      steady:   { t: "The Reliable One",   l: "No drama. Solid member. Rare W.",                     h: "Just… have a normal GC day" },
     },
     ui: {
-      howGood: "you're the glue of this GC",
+      leftread: "left on read 👀",
       share: (t, p, time) => `I'm "${t}" — my GC hit ${p} members in ${time} on Left on Read. Survive yours?`,
       vsBanner: (t, p) => `"${t}" grew a ${p}-member GC. Beat that?`,
       win: "Bigger GC! 🎉", tie: "Same size?! 😤", lose: "Theirs was bigger… rematch?",
       collected: (n, total) => `🎭 Personas: ${n}/${total}`,
       newUnlock: "✨ NEW YOU:", newMulti: (n) => `✨ ${n} NEW SIDES OF YOU:`,
       shareBtn: "📤 Share with the GC", leaveConfirm: "leave? tap again",
-    },
-  },
-  ph: {
-    label: "🇬🇧 English",
-    ambient: [
-      "hoy", "HAHAHA", "sino gising", "totoo", "😭😭", "pak", "grabe naman",
-      "ayos lang ba kayo", "brb", "sino po ito 😊", "gm ☀️", "asan na tayo",
-      "sana all", "😮‍💨", "chz", "edi wow", "pagod na 'ko", "🫡", "amp", "luh",
-    ],
-    types: {
-      scam:     { cast: "scammer", text: "pa-GCASH lang 500, emergency 🥺 09xx",
-                  chips: [["🚫 I-report","report",1],["💬 Sagutin","reply",0],["🙈 Iwasan","ignore",0]], expire: 5200, onExpire: "lose" },
-      crush:    { cast: "crush", text: "uy… busy ka ba? 👉👈",
-                  chips: [["❤️ Sagutin","reply",1],["🙈 Read na lang","ignore",0]], expire: 4500, onExpire: "lose" },
-      troll:    { cast: "drama", text: "edi wow ang yabang mo 🙄",
-                  chips: [["🔥 Bara","clap",0],["🙈 Iwasan","ignore",1]], expire: 5000, onExpire: "ok" },
-      chain:    { cast: "tita", text: "I-forward sa 10 tao o malas 🙏🕯️",
-                  chips: [["📤 Forward","forward",0],["🗑️ Burahin","delete",1]], expire: 5500, onExpire: "ok" },
-      stranger: { cast: "mom", text: "sino po ito? 😊 (kausap si +63 unknown)",
-                  chips: [["🛡️ Warn si mama","warn",1],["👋 Batiin","welcome",0]], expire: 4800, onExpire: "lose" },
-      fight:    { cast: "drama", text: "@bestie ikaw talaga sinabi mo yun 😤",
-                  chips: [["🕊️ Awatin","defuse",1],["🍿 Manood","watch",0],["🔥 Sali","join",0]], expire: 4600, onExpire: "lose" },
-      bday:     { cast: "ate", text: "GUYS bday ni Marites today!! 🎂",
-                  chips: [["🎉 Batiin","greet",1],["🙈 Iwasan","ignore",0]], expire: 5200, onExpire: "lose" },
-      chismis:  { cast: "marites", text: "psst chika lang… si ___ daw… 👀",
-                  chips: [["👀 Makinig","engage",0],["🙊 Umiwas","stay",1]], expire: 5200, onExpire: "ok" },
-      sib:      { cast: "sib", text: "pahingi pang-load 🥺 bilis",
-                  chips: [["💸 Padala","send",0],["🙈 Iwasan","ignore",1]], expire: 5400, onExpire: "ok" },
-      nice:     { cast: "friend", text: "salamat sa kahapon ha 🫶 love you",
-                  chips: [["❤️ I-react","react",1],["🙈 Iwasan","ignore",0]], expire: 5000, onExpire: "ok" },
-    },
-    outcomes: {
-      report: "na-report ang scammer ✓", reply_c: "nasagot mo agad ✓", ignore_c: "iniwan sa read ✓",
-      delete: "nabura ang chain ✓", warn: "na-save si mama sa scam ✓", defuse: "na-awat mo ✓",
-      greet: "nabati mo 🎉", stay: "umiwas ka ✓", react: "nag-react ka ❤️",
-      wrong: "…mali yun 💀", scammed: "na-scam ka 💸",
-      fed: "pinakain mo ang troll 🔥", spread: "ikinalat mo ang chismis 🫢",
-      leftread: "iniwan sa read 👀",
-    },
-    banners: {
-      raid: "🔗 KUMAKALAT ANG SCAM!", war: "🔥 GRABE ANG AWAY!", night: "🌙 2AM CONFESSION",
-      leak: "📸 NA-LEAK ANG SCREENSHOT!!", dead: "💀 NAMATAY ANG GC.", banked: "✌️ UMALIS KA NANG SIKAT",
-    },
-    sys: {
-      join: (n) => `sumali si ${n}`, leave: (n) => `umalis si ${n} 👋`,
-      added: "in-add ka ni Marites sa group 🎉", welcome: "welcome!! 🎉",
-    },
-    milestones: { 25: "umuusok ang GC 🔥", 50: "nag-viral ang GC mo 📈", 100: "MEGA GC 👑", 250: "alamat na GC 🏆" },
-    personas: {
-      ghoster:   { t: "Ang Ghoster",        l: "Halos lahat iniwan sa read. Buhay pa rin.",          h: "Mag-ignore nang tama" },
-      online:    { t: "Sobrang Online",     l: "0.2s ang reply. Lagi. Lumabas ka na.",               h: "Sagutin lahat, mabilis" },
-      admin:     { t: "GC Admin Energy",    l: "Patay ang scam, tahimik ang peace. Haligi.",         h: "Mag-report ng 3 scam" },
-      peace:     { t: "Ang Tagapamayapa",   l: "Naawat lahat ng away. Walang galit umalis.",         h: "Mag-awat ng 3 away" },
-      marites:   { t: "Certified Marites",  l: "Pinakamaraming chismis. Kinatatakutan.",              h: "Makinig sa chismis 👀" },
-      titasfav:  { t: "Paborito ni Tita",   l: "Nag-forward ng chain, pinakain ang troll 💀",        h: "Kagatin ang pain minsan" },
-      lurker:    { t: "Ang Tahimik",        l: "Bahagya lang. Umabot pa rin ng 2AM.",                h: "Halos walang gawin, survive" },
-      scammed:   { t: "Ang Na-scam",        l: "Nagpadala ng load. Nag-click. Naku.",                h: "Ma-scam ka 😬" },
-      crushwin:  { t: "May Rizz",           l: "Di iniwan sa read ang crush. Lodi.",                 h: "Lagi sagutin ang crush" },
-      dramaq:    { t: "Ang Drama Queen",    l: "Sumali sa lahat ng away. Gulo mismo.",               h: "Sumali sa away 🔥" },
-      kicked:    { t: "Dating Miyembro",    l: "Napatay ang GC. Alamat, sandali.",                   h: "Hayaang mamatay ang GC" },
-      steady:    { t: "Ang Maaasahan",      l: "Walang drama. Solid. Bihirang W.",                   h: "Maging normal lang" },
-    },
-    ui: {
-      howGood: "ikaw ang pundasyon ng GC na 'to",
-      share: (t, p, time) => `Ako si "${t}" — umabot ng ${p} members ang GC ko sa ${time} sa Left on Read. Kaya mo?`,
-      vsBanner: (t, p) => `Umabot ng ${p}-member GC si "${t}". Kaya mo 'yan?`,
-      win: "Mas malaki ang GC mo! 🎉", tie: "Parehong laki?! 😤", lose: "Mas malaki sila… rematch?",
-      collected: (n, total) => `🎭 Mga persona: ${n}/${total}`,
-      newUnlock: "✨ BAGONG IKAW:", newMulti: (n) => `✨ ${n} BAGONG PANIG MO:`,
-      shareBtn: "📤 I-share sa GC", leaveConfirm: "aalis? pindutin ulit",
+      howTo: "You're in the group chat and it never stops. Read each message and hit the right move from your bar — reply to the crush, report the scam, defuse the fight… or leave it on read. Some things you should NOT touch. Keep the group alive.",
     },
   },
 };
 
-const LANG_KEY = "lorLang";
-function detectLang() {
-  try {
-    const s = localStorage.getItem(LANG_KEY);
-    if (s && VOICES[s]) return s;
-    const l = (navigator.language || "").toLowerCase();
-    if (l.includes("ph") || l.startsWith("fil") || l.startsWith("tl")) return "ph";
-  } catch { /* ok */ }
-  return "en";
-}
-function voice() { return VOICES[state.lang] || VOICES.en; }
+// Your action bar — the toolkit YOU decide how to use.
+const TOOLS = [
+  { id: "react",  emoji: "❤️", name: "React" },
+  { id: "reply",  emoji: "💬", name: "Reply" },
+  { id: "defuse", emoji: "🛡️", name: "Defuse" },
+  { id: "report", emoji: "🚫", name: "Report" },
+  { id: "delete", emoji: "🗑️", name: "Delete" },
+  { id: "ignore", emoji: "🙈", name: "Ignore" },
+];
+
+function voice() { return VOICES.en; }
 
 /* ===================== PERSONAS (archetypes) ===================== */
 
@@ -196,8 +117,8 @@ const PERSONAS = [
     match: (s) => s.fightsDefused >= 3 },
   { id: "crushwin", by: "the_crush",     emoji: "😍", stamp: "SEEN ✓✓",
     match: (s) => s.crushReplied >= 2 && s.crushMissed === 0 },
-  { id: "dramaq",   by: "Marites",       emoji: "👑", stamp: "MUTED",
-    match: (s) => s.fightsJoined >= 2 },
+  { id: "menace",   by: "the_admins",    emoji: "😈", stamp: "MUTED",
+    match: (s) => s.wrong >= 6 },
   { id: "marites",  by: "the_barangay",  emoji: "🕵️‍♀️", stamp: "SEEN ✓✓",
     match: (s) => s.chismisEngaged >= 2 },
   { id: "titasfav", by: "Tita Baby",     emoji: "📿", stamp: "MUTED",
@@ -240,6 +161,7 @@ const state = {
   members: TUNING.startMembers, peak: TUNING.startMembers,
   streak: 0, bestStreak: 0, elapsed: 0,
   actives: [],          // live actionable messages: {el, def, id, spawnedAt, resolved, timerBar}
+  target: null,         // the message your next tool applies to
   seq: 0,
   lastFrame: 0, lastSecondTick: 0, nextAmbient: 0, nextActionable: 0,
   leaveArmedUntil: 0,
@@ -249,7 +171,7 @@ const state = {
 function freshStats() {
   return {
     acted: 0, leftOnRead: 0, correct: 0, wrong: 0,
-    scamsReported: 0, scammed: 0, fightsDefused: 0, fightsJoined: 0,
+    scamsReported: 0, scammed: 0, fightsDefused: 0,
     chismisEngaged: 0, baitTaken: 0, crushReplied: 0, crushMissed: 0,
     ending: null, peak: 0, survived: 0,
   };
@@ -358,7 +280,7 @@ function renderGallery() {
 
 const $ = (id) => document.getElementById(id);
 const el = {
-  frame: $("game-frame"), hud: $("hud"), chat: $("chat"), typebar: $("typebar"),
+  frame: $("game-frame"), hud: $("hud"), chat: $("chat"),
   members: $("members-val"), timer: $("hud-timer"), streakTag: $("streak-tag"),
   chaosBanner: $("chaos-banner"), milestone: $("milestone"), pauseOverlay: $("pause-overlay"),
   fx: $("fx-layer"),
@@ -374,7 +296,7 @@ function startGame() {
   state.running = true; state.paused = false;
   state.members = TUNING.startMembers; state.peak = TUNING.startMembers;
   state.streak = 0; state.bestStreak = 0; state.elapsed = 0;
-  state.actives = []; state.seq = 0; state.mercyUsed = false; state.leaveArmedUntil = 0;
+  state.actives = []; state.target = null; state.seq = 0; state.mercyUsed = false; state.leaveArmedUntil = 0;
   state.stats = freshStats();
   state.handle = readHandle();
 
@@ -386,7 +308,7 @@ function startGame() {
   el.startScreen.classList.add("hidden"); el.adScreen.classList.add("hidden");
   el.resultScreen.classList.add("hidden"); $("gallery-screen").classList.add("hidden");
   el.pauseOverlay.classList.add("hidden");
-  el.hud.classList.remove("hidden"); el.chat.classList.remove("hidden"); el.typebar.classList.remove("hidden");
+  el.hud.classList.remove("hidden"); el.chat.classList.remove("hidden"); $("action-bar").classList.remove("hidden");
   $("leave-btn").textContent = "Leave";
   sysMsg(voice().sys.added, "join");
   updateHud();
@@ -409,6 +331,7 @@ function gameLoop(now) {
     a.timerBar.style.width = (frac * 100) + "%";
     a.timerBar.classList.toggle("warn", frac < 0.35);
   }
+  refreshTarget();
 
   // ambient chatter
   if (now >= state.nextAmbient) {
@@ -494,69 +417,76 @@ function ambientMsg() {
 
 // A message that needs you: highlighted bubble + timer + inline chips.
 function spawnActionable() {
-  const typeKeys = Object.keys(voice().types);
-  const key = pick(typeKeys);
+  const key = pick(Object.keys(voice().types));
   const def = { ...voice().types[key], key };
   const who = CAST[def.cast];
   const seq = ++state.seq;
 
   const row = document.createElement("div");
   row.className = "msg-row them actionable";
-  const chipHtml = def.chips.map((c, i) => `<button class="chip" data-c="${c[1]}" data-i="${i}">${c[0]}</button>`).join("");
   row.innerHTML =
     `<span class="who">${who.emoji} ${who.name}</span>` +
     `<span class="bubble">${def.text}</span>` +
-    `<div class="timer-wrap"><div class="timer-bar"></div></div>` +
-    `<div class="chips">${chipHtml}</div>`;
+    `<div class="timer-wrap"><div class="timer-bar"></div></div>`;
   el.chat.appendChild(row); trimChat();
   sfx.pop(); buzz(15);
 
   const a = { el: row, def, seq, spawnedAt: performance.now(), resolved: false, timerBar: row.querySelector(".timer-bar") };
   state.actives.push(a);
-  row.querySelectorAll(".chip").forEach((b) =>
-    b.addEventListener("pointerdown", () => resolveActionable(a, b.dataset.c)));
+  // tap a message to target it (default target = whichever is most urgent)
+  row.addEventListener("pointerdown", () => { if (!a.resolved) { state.target = a; refreshTarget(); } });
+  refreshTarget();
 }
 
-// chipId null = expired (player left it on read).
-function resolveActionable(a, chipId) {
+/* Targeting: the player owns the toolkit; the game just points at the
+   most urgent unhandled message (or one they tapped to target). */
+function getTarget() {
+  if (state.target && !state.target.resolved) return state.target;
+  let best = null, least = Infinity;
+  for (const a of state.actives) {
+    if (a.resolved) continue;
+    const left = a.def.expire - (performance.now() - a.spawnedAt);
+    if (left < least) { least = left; best = a; }
+  }
+  return best;
+}
+function refreshTarget() {
+  const t = getTarget();
+  for (const a of state.actives) if (a.el) a.el.classList.toggle("targeted", a === t && !a.resolved);
+}
+function applyTool(toolId) {
+  if (!state.running || state.paused) return;
+  const t = getTarget();
+  if (!t) { floatText("nothing to handle", "#8b90a0"); return; }
+  resolveActionable(t, toolId);
+}
+
+// toolId null = expired (you left it on read).
+function resolveActionable(a, toolId) {
   if (a.resolved) return;
   a.resolved = true;
   const def = a.def;
-  a.el.classList.remove("actionable");
+  a.el.classList.remove("actionable", "targeted");
   const tw = a.el.querySelector(".timer-wrap"); if (tw) tw.remove();
-  const chips = a.el.querySelector(".chips"); if (chips) chips.remove();
-  const O = voice().outcomes;
   let outcome = "", good = false;
 
-  if (chipId === null) {
-    // expired — did leaving it on read work?
+  if (toolId === null) {
     state.stats.leftOnRead++;
-    if (def.onExpire === "ok") {
-      good = true; outcome = O.leftread; bumpCorrect(0);   // fine to ignore, no growth
-      if (def.key === "crush") state.stats.crushMissed++;  // (crush never expires ok, guard anyway)
-    } else {
-      good = false; outcome = whoLeftLine(def); loseMember(1);
-      if (def.key === "crush") state.stats.crushMissed++;
-    }
+    if (def.onExpire === "ok") { good = true; outcome = def.ok; bumpCorrect(0); }
+    else { good = false; outcome = def.bad; loseMember(1); if (def.key === "crush") state.stats.crushMissed++; }
   } else {
-    const chip = def.chips.find((c) => c[1] === chipId);
-    const correct = chip && chip[2] === 1;
     state.stats.acted++;
-    if (correct) {
-      good = true; outcome = O[chipId] || O[chipId + "_c"] || O.reply_c || "✓";
-      creditCorrect(def, chipId);
-      bumpCorrect(1);
-    } else {
-      good = false; outcome = wrongOutcome(def, chipId); creditWrong(def, chipId); loseMember(2);
-    }
+    if (toolId === def.tool) { good = true; outcome = def.ok; creditCorrect(def); bumpCorrect(1); }
+    else { good = false; outcome = def.bad; creditWrong(def); loseMember(2); }
   }
 
   const div = document.createElement("div");
   div.className = "outcome " + (good ? "good" : "bad");
   div.textContent = outcome;
   a.el.appendChild(div);
-  // drop from actives soon
+  if (state.target === a) state.target = null;
   setTimeout(() => { state.actives = state.actives.filter((x) => x !== a); }, 400);
+  refreshTarget();
   updateHud();
 }
 
@@ -577,29 +507,17 @@ function loseMember(sev) {
   sfx.leave(); shake(); buzz(120);
   changeMembers(-Math.max(1, sev || 1), null);
 }
-function creditCorrect(def, chipId) {
-  if (def.key === "scam") state.stats.scamsReported++;
-  if (def.key === "fight" && chipId === "defuse") state.stats.fightsDefused++;
-  if (def.key === "crush" && chipId === "reply") state.stats.crushReplied++;
+function creditCorrect(def) {
+  if (def.key === "scam" || def.key === "stranger") state.stats.scamsReported++;
+  if (def.key === "fight") state.stats.fightsDefused++;
+  if (def.key === "crush") state.stats.crushReplied++;
 }
-function creditWrong(def, chipId) {
+function creditWrong(def) {
   state.stats.wrong++;
-  if (def.key === "scam" || def.key === "sib") state.stats.scammed++;
+  if (def.key === "scam" || def.key === "sib" || def.key === "stranger") state.stats.scammed++;
   if (def.key === "chain" || def.key === "troll") state.stats.baitTaken++;
-  if (def.key === "chismis" && chipId === "engage") state.stats.chismisEngaged++;
-  if (def.key === "fight" && chipId === "join") state.stats.fightsJoined++;
+  if (def.key === "chismis") state.stats.chismisEngaged++;
   if (def.key === "crush") state.stats.crushMissed++;
-}
-function wrongOutcome(def, chipId) {
-  const O = voice().outcomes;
-  if (def.key === "scam" || def.key === "sib") return O.scammed;
-  if (def.key === "troll" || def.key === "chain") return O.fed;
-  if (def.key === "chismis") return O.spread;
-  return O.wrong;
-}
-function whoLeftLine(def) {
-  const who = CAST[def.cast];
-  return voice().sys.leave(who.name).replace(" 👋", "…");
 }
 
 /* ===================== ENDINGS ===================== */
@@ -751,7 +669,7 @@ function copyChallenge() {
 }
 function showMenu() {
   el.resultScreen.classList.add("hidden"); el.adScreen.classList.add("hidden"); $("gallery-screen").classList.add("hidden");
-  el.hud.classList.add("hidden"); el.chat.classList.add("hidden"); el.typebar.classList.add("hidden");
+  el.hud.classList.add("hidden"); el.chat.classList.add("hidden"); $("action-bar").classList.add("hidden");
   renderBestLine(); renderCollLine(); el.startScreen.classList.remove("hidden"); track("menu_open");
 }
 
@@ -786,13 +704,23 @@ function readHandle() {
 }
 function applyLang() {
   const ui = voice().ui;
-  $("how-to-text").textContent = { en: "You're in the barkada GC and it never stops. Messages fly in — reply, defuse, report the scam… or leave it on read. Some things you should NOT touch. Keep the group alive.", ph: "Nasa barkada GC ka at walang tigil. Dumarating ang mensahe — sagutin, awatin, i-report ang scam… o iwan sa read. May mga bagay na 'wag mong galawin. Panatilihing buhay ang grupo." }[state.lang];
-  $("lang-btn").textContent = voice().label;
+  $("how-to-text").textContent = ui.howTo;
   $("share-card-btn").textContent = ui.shareBtn;
   renderCollLine();
   if (state.challenger) $("versus-text").textContent = ui.vsBanner(state.challenger.title, state.challenger.peak);
 }
-function toggleLang() { state.lang = state.lang === "ph" ? "en" : "ph"; try { localStorage.setItem(LANG_KEY, state.lang); } catch { /* ok */ } track("lang_toggle", { lang: state.lang }); applyLang(); }
+
+// Build the action bar (your toolkit).
+function buildActionBar() {
+  const bar = $("action-bar"); bar.innerHTML = "";
+  for (const t of TOOLS) {
+    const b = document.createElement("button");
+    b.className = "tool"; b.dataset.tool = t.id;
+    b.innerHTML = `<span class="t-emoji">${t.emoji}</span><span class="t-name">${t.name}</span>`;
+    b.addEventListener("pointerdown", () => applyTool(t.id));
+    bar.appendChild(b);
+  }
+}
 
 /* ===================== PAUSE SAFETY ===================== */
 function onVisibility() {
@@ -809,10 +737,10 @@ document.addEventListener("visibilitychange", onVisibility);
 
 /* ===================== WIRE UP ===================== */
 
-state.lang = detectLang();
+state.lang = "en";
 initPostHog();
+buildActionBar();
 renderBestLine(); renderVersusBanner();
-try { if (state.challenger && state.challenger.lang && !localStorage.getItem(LANG_KEY)) state.lang = state.challenger.lang; } catch { /* ok */ }
 applyLang();
 $("mute-btn").textContent = muted ? "🔇" : "🔊";
 try { $("handle-input").value = localStorage.getItem("lorHandle") || ""; } catch { /* ok */ }
@@ -826,7 +754,6 @@ $("leave-btn").addEventListener("click", armLeave);
 $("share-card-btn").addEventListener("click", shareCard);
 $("copy-share-btn").addEventListener("click", copyChallenge);
 $("menu-btn").addEventListener("click", showMenu);
-$("lang-btn").addEventListener("click", toggleLang);
 $("mute-btn").addEventListener("click", toggleMute);
 const openGallery = () => { track("gallery_open", { collected: Object.keys(loadColl()).length }); renderGallery(); $("gallery-screen").classList.remove("hidden"); };
 $("gallery-btn").addEventListener("click", openGallery);
