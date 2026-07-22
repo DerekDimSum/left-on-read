@@ -130,13 +130,15 @@ const TUNING = {
   susWrong: 22, susDeflect: 4, susRight: -8,
   spawnGapStart: 2300, spawnGapMin: 1300,
   clueChance: 0.42,
-  // social escalation when you ignore something directed at you (no timer!)
-  escalate: [                // by how many messages have passed since it was asked
-    { age: 2, sus: 8 },
-    { age: 4, sus: 14 },
-    { age: 6, sus: 22 },
+  // social escalation when you ignore something aimed at you (no timer!).
+  // measured in messages-since-asked, NOT seconds. the first nudge is FREE —
+  // you get a real beat to notice it's about you before it ever costs you.
+  escalate: [
+    { age: 3, sus: 0 },      // "@you?" — just a nudge, no penalty
+    { age: 6, sus: 10 },     // "i can see you're online 😐"
+    { age: 9, sus: 20 },     // "…is this even the real ___?"
   ],
-  susIgnorePerMsg: 16,       // past the last escalation, each ignored message stings
+  susIgnorePerMsg: 18,       // past the last rung, each ignored message stings
   maxRows: 12,
   finaleAtSec: 68,
   members: 8,
@@ -188,7 +190,7 @@ function beep(f, d, type = "sine", v = 0.05, delay = 0) {
 const sfx = {
   pop()   { beep(880, .06, "sine", .05); },
   right() { beep(660, .07, "sine", .06); beep(990, .09, "sine", .05, .06); },
-  wrong() { beep(150, .2, "sawtooth", .07); },
+  wrong() { beep(392, .09, "triangle", .05); beep(294, .14, "triangle", .05, .09); },   // soft "hm-mm", not an alarm
   learn() { beep(700, .08, "triangle", .06); beep(1050, .1, "triangle", .05, .08); },
   sus()   { beep(200, .16, "square", .06); },
   yes()   { beep(784, .1, "sine", .06); },
@@ -367,8 +369,37 @@ function updateMeters() {
 
 function trim() { while (el.chat.children.length > TUNING.maxRows) el.chat.firstChild.remove(); }
 function sysMsg(text, kind) { const r = document.createElement("div"); r.className = "msg-row sys"; r.innerHTML = `<span class="sys-pill ${kind || ""}">${text}</span>`; el.chat.appendChild(r); trim(); }
-function chatMsg(who, text) { const r = document.createElement("div"); r.className = "msg-row them"; r.innerHTML = `<span class="who">${who}</span><span class="bubble">${text}</span>`; el.chat.appendChild(r); trim(); sfx.pop(); }
+function chatMsg(who, text) { const r = document.createElement("div"); r.className = "msg-row them"; r.innerHTML = `<span class="who">${who}</span><span class="bubble">${text}</span>`; el.chat.appendChild(r); trim(); sfx.pop(); return r; }
 function youMsg(text) { const r = document.createElement("div"); r.className = "msg-row you"; r.innerHTML = `<span class="bubble">${text}</span>`; el.chat.appendChild(r); trim(); return r; }
+
+/* How the group tells you you're doing — emoji reactions on YOUR message,
+   exactly like a real chat. This replaces screen-shake / vibration juice:
+   if it's feedback, it belongs in the conversation. */
+function addReactions(row, emojis, delay = 420) {
+  if (!row || !emojis || !emojis.length) return;
+  setTimeout(() => {
+    if (!state.running || !row.isConnected) return;
+    const r = document.createElement("span");
+    r.className = "reactions"; r.textContent = emojis.join(" ");
+    row.appendChild(r); sfx.pop();
+  }, delay);
+}
+
+/* "Bea is typing…" — the diegetic version of a countdown bar. Someone is
+   visibly composing a reply to you, which is pressure without a clock.
+   guard() lets a nag cancel itself if you answered in the meantime. */
+function typingThen(name, text, ms = 750, guard = null) {
+  const row = document.createElement("div");
+  row.className = "msg-row them";
+  row.innerHTML = `<span class="who">${name}</span><span class="bubble typing"><i></i><i></i><i></i></span>`;
+  el.chat.appendChild(row); trim();
+  setTimeout(() => {
+    row.remove();
+    if (!state.running) return;
+    if (guard && !guard()) return;
+    chatMsg(name, text);
+  }, ms);
+}
 
 function renderYouPanel() {
   const p = el.youPanel;
@@ -448,20 +479,26 @@ function resolvePrompt(choiceIdx) {
   hideReplyContext();
 
   const c = a.choices[choiceIdx];
-  youMsg(c.label);   // YOUR reply shows up in the chat, like a real message
+  const mine = youMsg(c.label);   // YOUR reply shows up in the chat, like a real message
 
+  /* All feedback is diegetic: reactions land on your own message and the
+     person who asked replies. No screen shake, no big vibration — you read
+     how it went the same way you would in a real group chat. */
   if (c.kind === "right") {
     state.stats.rights++;
     state.streak++; state.bestStreak = Math.max(state.bestStreak, state.streak);
-    addSus(TUNING.susRight); addLikes(1); sfx.right(); buzz(18); floatText("in character ✓", "#4cc79a");
-    if (Math.random() < 0.5) setTimeout(() => { if (state.running) chatMsg(who(), pick(["😂 same", "iconic", "❤️", "lmaooo", "real", "knew it 😌"])); }, 500);
+    addSus(TUNING.susRight); addLikes(1); sfx.right(); buzz(12);
+    addReactions(mine, pick([["❤️"], ["😂"], ["🔥"], ["❤️", "😂"], ["💯"]]));
+    typingThen(a.asker, pick(["😂 same", "iconic", "lmaooo", "classic you", "knew it 😌", "never change ❤️"]), 700);
   } else if (c.kind === "deflect") {
     state.stats.deflects++;
-    addSus(TUNING.susDeflect); floatText("dodged it 😮‍💨", "#8b90a0");
+    addSus(TUNING.susDeflect);
+    addReactions(mine, [pick(["👍", "🙂", "😐"])]);
   } else {
     state.stats.wrongs++; state.streak = 0;
-    addSus(TUNING.susWrong); addLikes(-1); sfx.wrong(); shake(); buzz(120); floatText("not like you 🤨", "#ff5a76");
-    setTimeout(() => { if (state.running) chatMsg(a.asker, pick([`wait that's not like you @${state.assumedName} 🤨`, `since when?? 😅`, `u ok? that's weird`, `who are you and what did you do w ${state.assumedName} 😂`])); }, 500);
+    addSus(TUNING.susWrong); addLikes(-1); sfx.wrong(); buzz(30);
+    addReactions(mine, pick([["🤨"], ["😳"], ["🤨", "😳"], ["❓"]]));
+    typingThen(a.asker, pick([`wait that's not like you @${state.assumedName} 🤨`, `since when?? 😅`, `u ok? that's weird`, `who are you and what did you do w ${state.assumedName} 😂`]), 750);
   }
   updateMeters();
 }
@@ -478,17 +515,21 @@ function advancePending() {
   chatMsg(who(), pick(AMBIENT));   // in-between beats keep the room alive
 }
 
-// the escalation ladder — impatient one nags, then the sharp one gets suspicious
+/* The escalation ladder — impatient one nags, then the sharp one gets
+   suspicious. Each arrives behind a "typing…" indicator so you can SEE
+   someone composing at you. If you reply first, the nag never lands. */
 function calloutFor(level) {
   const n = state.assumedName;
+  const seq = state.pending ? state.pending.seq : -1;
+  const stillIgnored = () => state.pending && state.pending.seq === seq;
   if (level >= 4) {
-    chatMsg(state.sharp, pick([`ok who IS this 🚨`, `${n} answer. right now.`, `someone call the real ${n} 📞`]));
+    typingThen(state.sharp, pick([`ok who IS this 🚨`, `${n} answer. right now.`, `someone call the real ${n} 📞`]), 700, stillIgnored);
   } else if (level === 3) {
-    chatMsg(state.sharp, pick([`wait… is this even the real ${n}? 🤨`, `${n} would've replied by now… who is this 👀`, `guys. something's off.`]));
+    typingThen(state.sharp, pick([`wait… is this even the real ${n}? 🤨`, `${n} would've replied by now… who is this 👀`, `guys. something's off.`]), 800, stillIgnored);
   } else if (level === 2) {
-    chatMsg(state.impatient, pick([`i can literally see you're online ${n} 😐`, `${n} you're right there tho`, `left on read?? by ${n}?? 😭`]));
+    typingThen(state.impatient, pick([`i can literally see you're online ${n} 😐`, `${n} you're right there tho`, `left on read?? by ${n}?? 😭`]), 750, stillIgnored);
   } else {
-    chatMsg(state.impatient, pick([`@${n}?`, `helloooo ${n} 👀`, `${n}?? 👀`, `you there ${n}`]));
+    typingThen(state.impatient, pick([`@${n}?`, `helloooo ${n} 👀`, `${n}?? 👀`, `you there ${n}`]), 650, stillIgnored);
   }
 }
 
